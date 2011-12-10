@@ -151,6 +151,7 @@ class MythPandora : public MythScreenType, public MythPianoServiceListener
     QTimer         *m_Timer;
 
   private slots:
+    QString getTimeString(int exTime, int maxTime);
     void heartbeat(void);
     void coverArtFetched(void);
     void logoutCallback();

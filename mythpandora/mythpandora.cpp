@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "mythmainwindow.h"
 #include "mythcontext.h"
 #include "mythdirs.h"
+#include "lcddevice.h"
 
 // MythPandora headers
 #include "mythpandora.h"
@@ -49,15 +50,26 @@ MythPianoService::MythPianoService()
     m_Listener(NULL),
     m_Timer(NULL)
 {
+    if (class LCD *lcd = LCD::Get())
+    {
+        lcd->switchToTime();
+        lcd->setFunctionLEDs(FUNC_MUSIC, true);
+    }
 }
 
 MythPianoService::~MythPianoService()
 {
-  // This really should have already been deleted by StopPlayback()
-  assert(!m_AudioOutput);
+    // This really should have already been deleted by StopPlayback()
+    assert(!m_AudioOutput);
 
-  if (m_Piano)
-    Logout();
+    if (class LCD *lcd = LCD::Get())
+    {
+        lcd->switchToTime();
+        lcd->setFunctionLEDs(FUNC_MUSIC, false);
+    }
+
+    if (m_Piano)
+      Logout();
 }
 
 void
@@ -113,8 +125,8 @@ int MythPianoService::Login()
   PianoInit (m_Piano);
 
   WaitressInit (&m_Waith);
-  strncpy (m_Waith.host, PIANO_RPC_HOST, sizeof (m_Waith.host)-1);
-  strncpy (m_Waith.port, PIANO_RPC_PORT, sizeof (m_Waith.port)-1);
+  m_Waith.url.host = strdup (PIANO_RPC_HOST);
+  m_Waith.url.port = strdup (PIANO_RPC_PORT);
 
   memset (&m_Player, 0, sizeof (m_Player));
 
@@ -211,6 +223,13 @@ void MythPianoService::StartPlayback()
 
   BroadcastMessage("New Song");
 
+  if (class LCD *lcd = LCD::Get())
+  {
+    lcd->switchToMusic(m_CurrentSong->artist,
+                       m_CurrentSong->album,
+                       m_CurrentSong->title);
+  }
+
   if (m_Timer) {
     m_Timer->stop();
     m_Timer->disconnect();
@@ -242,6 +261,11 @@ MythPianoService::StopPlayback()
   if (m_AudioOutput) {
     delete m_AudioOutput;
     m_AudioOutput = NULL;
+  }
+
+  if (class LCD *lcd = LCD::Get())
+  {
+    lcd->switchToTime();
   }
 }
 
@@ -278,6 +302,17 @@ MythPianoService::ToggleMute()
 void
 MythPianoService::NextSong()
 {
+    StopPlayback();
+
+    if (m_Playlist != NULL) {
+      m_CurrentSong = m_CurrentSong->next;
+    }
+
+    if (m_CurrentSong == NULL) {
+      GetPlaylist();
+    }
+
+    StartPlayback();
 }
 
 void
@@ -304,7 +339,7 @@ MythPianoService::PianoHttpRequest(WaitressHandle_t *waith,
   waith->extraHeaders = "Content-Type: text/xml\r\n";
   waith->postData = req->postData;
   waith->method = WAITRESS_METHOD_POST;
-  strncpy (waith->path, req->urlPath, sizeof (waith->path)-1);
+  waith->url.path = req->urlPath;
 
   return WaitressFetchBuf (waith, &req->responseData);
 }
@@ -434,7 +469,7 @@ void MythPianoService::WriteAudio(char* samples, size_t bytes)
   if (bytes == 0)
     return;
 
-  m_AudioOutput->AddFrames(samples, bytes / m_AudioOutput->GetBytesPerFrame(), -1);
+  m_AudioOutput->AddFrames(samples, bytes / 4, -1);
   m_AudioOutput->Drain();
 }
 
@@ -574,17 +609,24 @@ bool MythPandora::Create(void)
 void
 MythPandora::heartbeat(void)
 {
-  char buffer[128];
   MythPianoService* service = GetMythPianoService();
   long played = 0, duration = 0;
+  
   service->GetTimes(&played, &duration);
-  sprintf(buffer, "%02i:%02i / %02i:%02i\n",
-	  (int) played / BAR_PLAYER_MS_TO_S_FACTOR / 60,
-	  (int) played / BAR_PLAYER_MS_TO_S_FACTOR % 60,	 
-	  (int) duration / BAR_PLAYER_MS_TO_S_FACTOR / 60,
-	  (int) duration / BAR_PLAYER_MS_TO_S_FACTOR % 60);
+  played = played / BAR_PLAYER_MS_TO_S_FACTOR;
+  duration = duration / BAR_PLAYER_MS_TO_S_FACTOR;
 
-  m_playTimeText->SetText(QString(buffer));
+  QString time_string = getTimeString(played, duration);
+  m_playTimeText->SetText(time_string);
+
+  if (class LCD *lcd = LCD::Get())
+  {
+    float percent_heard = duration <= 0 ? 0.0 : ((float)played /
+                           (float)duration) * 1000.0;
+    if (time_string.length() > (int)lcd->getLCDWidth())
+      time_string.remove(' ');
+    lcd->setMusicProgress(time_string, percent_heard);
+  }
 }
 
 
@@ -606,7 +648,8 @@ bool MythPandora::keyPressEvent(QKeyEvent *event)
     }
     else if (action == "NEXTTRACK")
     {
-	  printf("Next track\n");
+        MythPianoService* service = GetMythPianoService();
+        service->NextSong();
     }
     else if (action == "PAUSE" || action == "PLAY")
     {
@@ -660,6 +703,38 @@ void MythPandora::selectStationCallback()
 {
   GetScreenStack()->PopScreen(false, true);
   showStationSelectDialog();
+}
+
+QString MythPandora::getTimeString(int exTime, int maxTime)
+{
+  QString time_string;
+  
+  int eh = exTime / 3600;
+  int em = (exTime / 60) % 60;
+  int es = exTime % 60;
+
+  int maxh = maxTime / 3600;
+  int maxm = (maxTime / 60) % 60;
+  int maxs = maxTime % 60;
+
+  if (maxTime <= 0)
+  {
+    if (eh > 0)
+      time_string.sprintf("%d:%02d:%02d", eh, em, es);
+    else
+      time_string.sprintf("%02d:%02d", em, es);
+  }
+  else
+  {
+    if (maxh > 0)
+      time_string.sprintf("%d:%02d:%02d / %d:%02d:%02d", eh, em,
+          es, maxh, maxm, maxs);
+    else
+      time_string.sprintf("%02d:%02d / %02d:%02d", em, es, maxm,
+          maxs);
+  }
+
+  return time_string;
 }
 
 

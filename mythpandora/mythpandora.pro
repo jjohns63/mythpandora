@@ -10,9 +10,9 @@ TARGET = mythpandora
 target.path = $${LIBDIR}/mythtv/plugins
 INSTALLS += target
 
-INCLUDEPATH += ../libpiano/src
-INCLUDEPATH += ../libwaitress/src
-INCLUDEPATH += ../libezxml/src
+INCLUDEPATH += ../pianobar/src/libpiano
+INCLUDEPATH += ../pianobar/src/libwaitress
+INCLUDEPATH += ../pianobar/src/libezxml
 INCLUDEPATH += $${PREFIX}/include/mythtv
 INCLUDEPATH += $${PREFIX}/include/mythtv/libmyth
 INCLUDEPATH += $${PREFIX}/include/mythtv/libmythui
@@ -29,13 +29,13 @@ LIBS += -lmad -lfaad
 HEADERS += config.h mythpandora.h player.h
 SOURCES += main.cpp player.c mythpandora.cpp
 
-SOURCES += ../libezxml/src/ezxml.c
-HEADERS += ../libezxml/src/ezxml.h
+SOURCES += ../pianobar/src/libezxml/ezxml.c
+HEADERS += ../pianobar/src/libezxml/ezxml.h
 
-SOURCES += ../libwaitress/src/waitress.c
-HEADERS += ../libwaitress/src/waitress.h
+SOURCES += ../pianobar/src/libwaitress/waitress.c
+HEADERS += ../pianobar/src/libwaitress/waitress.h
 
-SOURCES  += ../libpiano/src/crypt.c ../libpiano/src/piano.c ../libpiano/src/xml.c
-HEADERS  += ../libpiano/src/config.h ../libpiano/src/crypt_key_output.h ../libpiano/src/xml.h ../libpiano/src/crypt.h ../libpiano/src/piano.h ../libpiano/src/crypt_key_input.h ../libpiano/src/piano_private.h
+SOURCES  += ../pianobar/src/libpiano/crypt.c ../pianobar/src/libpiano/piano.c ../pianobar/src/libpiano/xml.c
+HEADERS  += ../pianobar/src/libpiano/config.h ../pianobar/src/libpiano/crypt_key_output.h ../pianobar/src/libpiano/xml.h ../pianobar/src/libpiano/crypt.h ../pianobar/src/libpiano/piano.h ../pianobar/src/libpiano/crypt_key_input.h ../pianobar/src/libpiano/piano_private.h
 
 include ( ../../libs-targetfix.pro )
