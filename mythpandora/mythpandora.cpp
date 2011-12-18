@@ -223,8 +223,8 @@ void MythPianoService::StartPlayback()
   m_Player.gain = m_CurrentSong->fileGain;
   m_Player.audioFormat = m_CurrentSong->audioFormat;
   m_Player.mode = audioPlayer::PLAYER_STARTING;
-//  m_Player.writer = &WriteAudioCallback;
-//  m_Player.writerCtx = (void*) this;
+  m_Player.writer = &WriteAudioCallback;
+  m_Player.writerCtx = (void*) this;
 
   pthread_create (&m_PlayerThread,
 		  NULL,

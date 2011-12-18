@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2008-2010
-	Lars-Dominik Braun <PromyLOPh@lavabit.com>
+	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,6 @@ THE SOFTWARE.
 
 #define bigToHostEndian32(x) ntohl(x)
 
-
 /* wait while locked, but don't slow down main thread by keeping
  * locks too long */
 #define QUIT_PAUSE_CHECK \
@@ -57,7 +56,7 @@ THE SOFTWARE.
  *	@param apply this gain
  *	@return this * yourvalue = newgain value
  */
-static inline unsigned int computeReplayGainScale (float applyGain) {
+unsigned int BarPlayerCalcScale (float applyGain) {
 	return pow (10.0, applyGain / 20.0) * RG_SCALE_FACTOR;
 }
 
@@ -205,7 +204,6 @@ static WaitressCbReturn_t BarPlayerAACCb (void *ptr, size_t size, void *stream) 
 					}
 
 					if (!player->writer) {
-
 					audioOutDriver = ao_default_driver_id();
 					printf("audioOutDriver == %d\n", audioOutDriver);
 
@@ -371,7 +369,6 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
 			player->samplerate = player->mp3Synth.pcm.samplerate;
 
 			if (!player->writer) {
-
 			audioOutDriver = ao_default_driver_id();
 			memset (&format, 0, sizeof (format));
 			format.bits = 16;
@@ -388,7 +385,7 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
 			} // !player->writer
 
 			/* calc song length using the framerate of the first decoded frame */
-			player->songDuration = (unsigned long long int) player->waith.contentLength /
+			player->songDuration = (unsigned long long int) player->waith.request.contentLength /
 					((unsigned long long int) player->mp3Frame.header.bitrate /
 					(unsigned long long int) BAR_PLAYER_MS_TO_S_FACTOR / 8LL);
 
@@ -431,7 +428,6 @@ static WaitressCbReturn_t BarPlayerMp3Cb (void *ptr, size_t size, void *stream) 
  *	@return NULL NULL NULL ...
  */
 void *BarPlayerThread (void *data) {
-
 	struct audioPlayer *player = data;
 	char extraHeaders[25];
 	void *ret = PLAYER_RET_OK;
@@ -442,7 +438,6 @@ void *BarPlayerThread (void *data) {
 
 	/* init handles */
 	pthread_mutex_init (&player->pauseMutex, NULL);
-	player->scale = computeReplayGainScale (player->gain);
 	player->waith.data = (void *) player;
 	/* extraHeaders will be initialized later */
 	player->waith.extraHeaders = extraHeaders;

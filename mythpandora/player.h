@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2008-2010
-	Lars-Dominik Braun <PromyLOPh@lavabit.com>
+	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,6 @@ THE SOFTWARE.
 
 #include "config.h"
 
-//#define ENABLE_MAD
-#define ENABLE_FAAD
-
-
 #ifdef ENABLE_FAAD
 #include <neaacdec.h>
 #endif
@@ -39,6 +35,8 @@ THE SOFTWARE.
 #endif
 
 #include <ao/ao.h>
+/* required for freebsd */
+#include <sys/types.h>
 #include <pthread.h>
 
 #include <piano.h>
@@ -106,10 +104,13 @@ struct audioPlayer {
 
 	char doQuit;
 	pthread_mutex_t pauseMutex;
+    // ***MYTHPANDORA REMOVE
+	// const BarSettings_t *settings;
 };
 
 enum {PLAYER_RET_OK = 0, PLAYER_RET_ERR = 1};
 
 void *BarPlayerThread (void *data);
+unsigned int BarPlayerCalcScale (float);
 
 #endif /* _PLAYER_H */
