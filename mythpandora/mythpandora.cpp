@@ -95,7 +95,7 @@ void MythPianoService::BroadcastMessage(const char *format, ...)
   buffer.vsprintf(format, args);
   va_end(args);
 
-    printf("**** MythPianoService: %s\n", buffer.ascii());
+  //  printf("**** MythPianoService: %s\n", buffer.ascii());
 
   if (m_Listener)
     m_Listener->RecvMessage(buffer.ascii());
@@ -210,7 +210,7 @@ void MythPianoService::StartPlayback()
 
   if (m_Player.mode != audioPlayer::PLAYER_FREED &&
       m_Player.mode != audioPlayer::PLAYER_FINISHED_PLAYBACK) {
-    BroadcastMessage("So sorry, We thinkg we are already playing.  Try again (%d).", m_Player.mode);
+    BroadcastMessage("So sorry, we think we are already playing.  Try again (%d).", m_Player.mode);
     return;
   }
 
@@ -218,8 +218,7 @@ void MythPianoService::StartPlayback()
   memset (&m_Player, 0, sizeof (m_Player));
   WaitressInit (&m_Player.waith);
   WaitressSetUrl (&m_Player.waith, m_CurrentSong->audioUrl);
-  m_Player.waith.url.tls = true;
-  m_Player.waith.tlsFingerprint = tlsFingerprint;
+
   m_Player.gain = m_CurrentSong->fileGain;
   m_Player.audioFormat = m_CurrentSong->audioFormat;
   m_Player.mode = audioPlayer::PLAYER_STARTING;
@@ -330,7 +329,7 @@ MythPianoService::heartbeat(void)
 {
   if (m_Player.mode >= audioPlayer::PLAYER_FINISHED_PLAYBACK ||
       m_Player.mode == audioPlayer::PLAYER_FREED) {
-    
+
     if (m_Playlist != NULL) {
       m_CurrentSong = m_CurrentSong->next;
     }
@@ -343,7 +342,7 @@ MythPianoService::heartbeat(void)
   }
 }
 
-WaitressReturn_t 
+WaitressReturn_t
 MythPianoService::PianoHttpRequest(WaitressHandle_t *waith,
 				   PianoRequest_t *req) {
   waith->extraHeaders = "Content-Type: text/xml\r\n";
