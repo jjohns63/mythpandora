@@ -10,7 +10,6 @@ TARGET = mythpandora
 target.path = $${LIBDIR}/mythtv/plugins
 INSTALLS += target
 
-INCLUDEPATH += ../pianobar/src
 INCLUDEPATH += ../pianobar/src/libpiano
 INCLUDEPATH += ../pianobar/src/libwaitress
 INCLUDEPATH += ../pianobar/src/libezxml
@@ -28,11 +27,8 @@ LIBS += -lgnutls
 LIBS += -lmad -lfaad
 
 # Input
-HEADERS += config.h mythpandora.h
-SOURCES += main.cpp mythpandora.cpp
-
-SOURCES += ../pianobar/src/player.c
-HEADERS += ../pianobar/src/player.h
+HEADERS += config.h mythpandora.h player.h
+SOURCES += main.cpp player.c mythpandora.cpp
 
 SOURCES += ../pianobar/src/libezxml/ezxml.c
 HEADERS += ../pianobar/src/libezxml/ezxml.h
