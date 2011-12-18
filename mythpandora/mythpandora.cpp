@@ -39,8 +39,10 @@ THE SOFTWARE.
 #include "mythpandora.h"
 #include "player.h"
 
+char tlsFingerprint[20] = { 0xD9, 0x98, 0x0B, 0xA2, 0xCC, 0x0F, 0x97, 0xBB, \
+    0x03, 0x82, 0x2C, 0x62, 0x11, 0xEA, 0xEA, 0x4A, 0x06, 0xEE, 0xF4, 0x27 };
 
-MythPianoService::MythPianoService() 
+MythPianoService::MythPianoService()
   : m_Piano(NULL),
     m_PlayerThread(NULL),
     m_AudioOutput(NULL),
@@ -93,7 +95,7 @@ void MythPianoService::BroadcastMessage(const char *format, ...)
   buffer.vsprintf(format, args);
   va_end(args);
 
-  //  printf("**** MythPianoService: %s\n", buffer.ascii());
+    printf("**** MythPianoService: %s\n", buffer.ascii());
 
   if (m_Listener)
     m_Listener->RecvMessage(buffer.ascii());
@@ -117,16 +119,22 @@ void MythPianoService::Logout()
 
   // Leak?
   m_CurrentStation = NULL;
+
+  WaitressFree (&m_Waith);
+  gnutls_global_deinit ();
 }
 
 int MythPianoService::Login()
 {
   m_Piano = (PianoHandle_t*) malloc(sizeof(PianoHandle_t));
+
+  gnutls_global_init();
   PianoInit (m_Piano);
 
   WaitressInit (&m_Waith);
   m_Waith.url.host = strdup (PIANO_RPC_HOST);
-  m_Waith.url.port = strdup (PIANO_RPC_PORT);
+  m_Waith.url.tls = true;
+  m_Waith.tlsFingerprint = tlsFingerprint;
 
   memset (&m_Player, 0, sizeof (m_Player));
 
@@ -134,7 +142,7 @@ int MythPianoService::Login()
   QString username = gCoreContext->GetSetting("pandora-username");
   QString password = gCoreContext->GetSetting("pandora-password");
 
-  //wtf really?  
+  //wtf really?
   char* usernameBuff = strndup(username.toUtf8().data(), 1024);
   char* passwordBuff = strndup(password.toUtf8().data(), 1024);
 
@@ -169,7 +177,7 @@ void MythPianoService::GetPlaylist()
   PianoRequestDataGetPlaylist_t reqData;
   reqData.station = m_CurrentStation;
   reqData.format = PIANO_AF_AACPLUS;
-  
+
   BroadcastMessage("Receiving new playlist... ");
   if (!PianoCall(PIANO_REQUEST_GET_PLAYLIST, &reqData, &pRet, &wRet)) {
     m_CurrentStation = NULL;
@@ -210,11 +218,13 @@ void MythPianoService::StartPlayback()
   memset (&m_Player, 0, sizeof (m_Player));
   WaitressInit (&m_Player.waith);
   WaitressSetUrl (&m_Player.waith, m_CurrentSong->audioUrl);
+  m_Player.waith.url.tls = true;
+  m_Player.waith.tlsFingerprint = tlsFingerprint;
   m_Player.gain = m_CurrentSong->fileGain;
   m_Player.audioFormat = m_CurrentSong->audioFormat;
   m_Player.mode = audioPlayer::PLAYER_STARTING;
-  m_Player.writer = &WriteAudioCallback;
-  m_Player.writerCtx = (void*) this;
+//  m_Player.writer = &WriteAudioCallback;
+//  m_Player.writerCtx = (void*) this;
 
   pthread_create (&m_PlayerThread,
 		  NULL,
@@ -383,39 +393,39 @@ MythPianoService::PianoCall(PianoRequestType_t type,
       if (*pRet == PIANO_RET_AUTH_TOKEN_INVALID &&
 	  type != PIANO_REQUEST_LOGIN) {
 	/* reauthenticate */
-	PianoReturn_t authpRet;
-	WaitressReturn_t authwRet;
-	PianoRequestDataLogin_t reqData;
+        PianoReturn_t authpRet;
+        WaitressReturn_t authwRet;
+        PianoRequestDataLogin_t reqData;
 
-	QString username = gCoreContext->GetSetting("pandora-username");
-	QString password = gCoreContext->GetSetting("pandora-password");
+        QString username = gCoreContext->GetSetting("pandora-username");
+        QString password = gCoreContext->GetSetting("pandora-password");
 
-	//wtf really?  
-	char* usernameBuff = strndup(username.toUtf8().data(), 1024);
-	char* passwordBuff = strndup(password.toUtf8().data(), 1024);
+        //wtf really?
+        char* usernameBuff = strndup(username.toUtf8().data(), 1024);
+        char* passwordBuff = strndup(password.toUtf8().data(), 1024);
 
-	reqData.user = usernameBuff;
-	reqData.password = passwordBuff;
-	reqData.step = 0;
-	
-	BroadcastMessage ("Reauthentication required... ");
-	if (!PianoCall(PIANO_REQUEST_LOGIN, &reqData, &authpRet, &authwRet)) {
-	  *pRet = authpRet;
-	  *wRet = authwRet;
-	  if (req.responseData != NULL) {
-	    free (req.responseData);
-	  }
-	  PianoDestroyRequest (&req);
-	  return 0;
-	} else {
-	  /* try again */
-	  *pRet = PIANO_RET_CONTINUE_REQUEST;
-	  BroadcastMessage("Trying again... ");
-	}
+        reqData.user = usernameBuff;
+        reqData.password = passwordBuff;
+        reqData.step = 0;
 
-	// wtf
-	free(usernameBuff);
-	free(passwordBuff);
+        BroadcastMessage ("Reauthentication required... ");
+        if (!PianoCall(PIANO_REQUEST_LOGIN, &reqData, &authpRet, &authwRet)) {
+          *pRet = authpRet;
+          *wRet = authwRet;
+          if (req.responseData != NULL) {
+            free (req.responseData);
+          }
+          PianoDestroyRequest (&req);
+          return 0;
+        } else {
+          /* try again */
+          *pRet = PIANO_RET_CONTINUE_REQUEST;
+          BroadcastMessage("Trying again... ");
+        }
+
+        // wtf
+        free(usernameBuff);
+        free(passwordBuff);
 
       } else if (*pRet != PIANO_RET_OK) {
 	BroadcastMessage("Error: %s\n", PianoErrorToStr (*pRet));
@@ -436,7 +446,7 @@ MythPianoService::PianoCall(PianoRequestType_t type,
     }
     PianoDestroyRequest (&req);
   } while (*pRet == PIANO_RET_CONTINUE_REQUEST);
-  
+
   return 1;
 }
 

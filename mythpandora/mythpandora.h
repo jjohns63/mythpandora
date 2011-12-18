@@ -41,7 +41,7 @@ THE SOFTWARE.
 extern "C" {
 #include <piano.h>
 #include <waitress.h>
-#include "player.h"
+#include <player.h>
 }
 
 class MythPianoService;
